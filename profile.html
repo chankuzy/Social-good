@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Facebook Profile</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --fb-blue: #1877F2;
+            --fb-bg: #F0F2F5;
+        }
+        body {
+            background: var(--fb-bg);
+            padding-top: 56px;
+        }
+        .profile-cover {
+            height: 200px;
+            background: url('https://picsum.photos/800/300') center/cover;
+            position: relative;
+        }
+        .profile-picture {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 4px solid white;
+            position: absolute;
+            bottom: -60px;
+            left: 20px;
+        }
+        .profile-nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: white;
+            z-index: 1000;
+            box-shadow: 0 1px 8px rgba(0,0,0,0.1);
+        }
+        .profile-content {
+            margin-top: 80px;
+        }
+        .profile-tabs {
+            position: sticky;
+            top: 56px;
+            background: white;
+            z-index: 999;
+        }
+        .tab-item {
+            flex: 1;
+            text-align: center;
+            padding: 12px;
+            border-bottom: 3px solid transparent;
+        }
+        .tab-item.active {
+            border-color: var(--fb-blue);
+            color: var(--fb-blue);
+        }
+        .friend-card {
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+        }
+        .post-card {
+            background: white;
+            border-radius: 10px;
+            margin-bottom: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Profile Navigation -->
+        <div class="profile-nav d-flex align-items-center px-3 py-2">
+            <i class="fas fa-arrow-left fs-5 me-3"></i>
+            <h5 class="mb-0">{{ user.name }}</h5>
+        </div>
+
+        <!-- Cover Photo -->
+        <div class="profile-cover">
+            <img :src="user.profilePic" class="profile-picture">
+        </div>
+
+        <!-- Profile Info -->
+        <div class="profile-content px-3">
+            <div class="mb-3">
+                <h4 class="mb-1">{{ user.name }}</h4>
+                <p class="text-muted small mb-1">{{ user.bio }}</p>
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-users me-2 text-muted"></i>
+                    <span class="small">{{ user.friendsCount }} friends</span>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="d-grid gap-2 mb-3">
+                <button class="btn btn-primary">
+                    <i class="fas fa-user-plus me-2"></i>
+                    {{ user.isFriend ? 'Friends' : 'Add Friend' }}
+                </button>
+                <button class="btn btn-light">
+                    <i class="fas fa-comment-dots me-2"></i>Message
+                </button>
+            </div>
+
+            <!-- Tabs Navigation -->
+            <div class="profile-tabs d-flex mb-3">
+                <div class="tab-item" 
+                     :class="{ active: activeTab === 'posts' }"
+                     @click="activeTab = 'posts'">
+                    Posts
+                </div>
+                <div class="tab-item" 
+                     :class="{ active: activeTab === 'about' }"
+                     @click="activeTab = 'about'">
+                    About
+                </div>
+                <div class="tab-item" 
+                     :class="{ active: activeTab === 'friends' }"
+                     @click="activeTab = 'friends'">
+                    Friends
+                </div>
+                <div class="tab-item" 
+                     :class="{ active: activeTab === 'photos' }"
+                     @click="activeTab = 'photos'">
+                    Photos
+                </div>
+            </div>
+
+            <!-- Tab Content -->
+            <div v-if="activeTab === 'posts'">
+                <div class="post-card p-3" v-for="post in posts">
+                    <div class="d-flex align-items-center mb-3">
+                        <img :src="post.user.profilePic" class="rounded-circle me-2" width="40">
+                        <div>
+                            <strong>{{ post.user.name }}</strong>
+                            <div class="text-muted small">{{ post.time }}</div>
+                        </div>
+                    </div>
+                    <p>{{ post.content }}</p>
+                    <div class="d-flex justify-content-between text-muted">
+                        <button class="btn btn-link text-decoration-none">
+                            <i class="fas fa-thumbs-up me-2"></i>{{ post.likes }}
+                        </button>
+                        <button class="btn btn-link text-decoration-none">
+                            <i class="fas fa-comment me-2"></i>{{ post.comments }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="activeTab === 'friends'">
+                <div class="friend-card p-3" v-for="friend in friends">
+                    <div class="d-flex align-items-center">
+                        <img :src="friend.profilePic" class="rounded-circle me-3" width="60">
+                        <div>
+                            <strong>{{ friend.name }}</strong>
+                            <div class="text-muted small">{{ friend.mutualFriends }} mutual friends</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="activeTab === 'photos'">
+                <div class="photo-grid">
+                    <img v-for="photo in photos" :src="photo" class="img-fluid">
+                </div>
+            </div>
+
+            <div v-if="activeTab === 'about'" class="about-section">
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h6 class="card-title">Details</h6>
+                        <div class="mb-2">
+                            <i class="fas fa-briefcase me-2"></i>
+                            {{ user.work }}
+                        </div>
+                        <div class="mb-2">
+                            <i class="fas fa-graduation-cap me-2"></i>
+                            {{ user.education }}
+                        </div>
+                        <div class="mb-2">
+                            <i class="fas fa-home me-2"></i>
+                            Lives in {{ user.location }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue
+
+        createApp({
+            data() {
+                return {
+                    activeTab: 'posts',
+                    user: {
+                        name: "John Doe",
+                        profilePic: "https://i.pravatar.cc/150",
+                        bio: "Frontend Developer | Vue.js enthusiast",
+                        friendsCount: 856,
+                        isFriend: false,
+                        work: "Senior Developer at Tech Corp",
+                        education: "MIT Graduate",
+                        location: "New York City"
+                    },
+                    posts: [
+                        {
+                            user: {
+                                name: "John Doe",
+                                profilePic: "https://i.pravatar.cc/150"
+                            },
+                            content: "Just launched my new portfolio website! 🚀",
+                            time: "2h ago",
+                            likes: 142,
+                            comments: 28
+                        },
+                        {
+                            user: {
+                                name: "John Doe",
+                                profilePic: "https://i.pravatar.cc/150"
+                            },
+                            content: "Beautiful sunset today 🌅",
+                            time: "1d ago",
+                            likes: 89,
+                            comments: 15
+                        }
+                    ],
+                    friends: [
+                        {
+                            name: "Alice Smith",
+                            profilePic: "https://i.pravatar.cc/150?img=1",
+                            mutualFriends: 34
+                        },
+                        {
+                            name: "Bob Johnson",
+                            profilePic: "https://i.pravatar.cc/150?img=2",
+                            mutualFriends: 12
+                        },
+                        {
+                            name: "Emma Wilson",
+                            profilePic: "https://i.pravatar.cc/150?img=3",
+                            mutualFriends: 56
+                        }
+                    ],
+                    photos: [
+                        "https://picsum.photos/300/300?random=1",
+                        "https://picsum.photos/300/300?random=2",
+                        "https://picsum.photos/300/300?random=3",
+                        "https://picsum.photos/300/300?random=4",
+                        "https://picsum.photos/300/300?random=5",
+                        "https://picsum.photos/300/300?random=6"
+                    ]
+                }
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html>

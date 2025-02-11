@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MetaSocial</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #1877F2;
+            --secondary-color: #65676B;
+            --bg-color: #FFFFFF;
+            --text-color: #050505;
+            --border-color: #DADDE1;
+        }
+
+        [data-theme="dark"] {
+            --primary-color: #2D88FF;
+            --bg-color: #18191A;
+            --text-color: #E4E6EB;
+            --border-color: #3E4042;
+        }
+
+        body {
+            background: var(--bg-color);
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+
+        .app-container {
+            max-width: 500px;
+            margin: 0 auto;
+            min-height: 100vh;
+        }
+
+        .navigation-bar {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: var(--bg-color);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .story-ring {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #fdf497 0%, #fdf497 5%, #fd5949 45%,#d6249f 60%,#285AEB 90%);
+            padding: 2px;
+        }
+
+        .post-card {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+        }
+
+        .reaction-picker {
+            position: absolute;
+            bottom: 50px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 30px;
+            padding: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .comment-input {
+            background: var(--bg-color) !important;
+            border: 1px solid var(--border-color) !important;
+            color: var(--text-color) !important;
+        }
+
+        .live-indicator {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background: #E41E3F;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="app-container">
+            <!-- Theme Toggle -->
+            <button class="btn btn-link position-fixed top-0 end-0 m-3" @click="toggleTheme">
+                <i :class="darkMode ? 'fas fa-sun' : 'fas fa-moon'"></i>
+            </button>
+
+            <!-- Stories Carousel -->
+            <div class="stories-container d-flex px-2 py-3 overflow-x-auto">
+                <div class="story-ring mx-2" v-for="story in stories" @click="viewStory(story)">
+                    <img :src="story.user.avatar" class="w-100 h-100 rounded-circle border-2 border-white">
+                </div>
+                <div class="story-ring mx-2 bg-secondary d-flex align-items-center justify-content-center" 
+                     @click="openCamera">
+                    <i class="fas fa-plus text-white"></i>
+                </div>
+            </div>
+
+            <!-- Create Post -->
+            <div class="post-card p-3 mb-3">
+                <div class="d-flex align-items-center mb-3">
+                    <img :src="currentUser.avatar" class="rounded-circle me-2" width="40">
+                    <input type="text" 
+                           class="form-control comment-input rounded-pill" 
+                           placeholder="What's on your mind?"
+                           @click="openPostCreator">
+                </div>
+                <div class="d-flex justify-content-between">
+                    <button class="btn btn-light w-100 me-2">
+                        <i class="fas fa-video text-danger"></i> Live
+                    </button>
+                    <button class="btn btn-light w-100 me-2">
+                        <i class="fas fa-photo-video text-success"></i> Photo
+                    </button>
+                    <button class="btn btn-light w-100">
+                        <i class="fas fa-smile text-warning"></i> Feeling
+                    </button>
+                </div>
+            </div>
+
+            <!-- Posts Feed -->
+            <div class="post-card p-3 mb-3" v-for="post in posts" :key="post.id">
+                <div class="d-flex align-items-center mb-3">
+                    <img :src="post.user.avatar" class="rounded-circle me-2" width="40">
+                    <div>
+                        <strong>{{ post.user.name }}</strong>
+                        <div class="text-muted small">{{ post.time }}</div>
+                    </div>
+                </div>
+                
+                <p>{{ post.content }}</p>
+                
+                <div v-if="post.media" class="mb-3 position-relative">
+                    <img :src="post.media" class="img-fluid rounded">
+                    <div v-if="post.isLive" class="live-indicator">LIVE</div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center text-muted">
+                    <div class="d-flex">
+                        <div class="reaction-counter me-3" 
+                             @mouseenter="showReactions(post)"
+                             @mouseleave="hideReactions">
+                            {{ post.reactions.length }} 
+                            <i class="fas fa-thumbs-up"></i>
+                        </div>
+                        <span>{{ post.comments.length }} Comments</span>
+                    </div>
+                    <span>{{ post.shares }} Shares</span>
+                </div>
+
+                <hr>
+
+                <div class="d-flex justify-content-between">
+                    <button class="btn btn-link text-decoration-none" 
+                            @click="toggleReaction(post)"
+                            @mouseenter="showReactions(post)"
+                            @mouseleave="hideReactions">
+                        <i class="fas fa-thumbs-up"></i> Like
+                    </button>
+                    <button class="btn btn-link text-decoration-none" @click="focusComment(post)">
+                        <i class="fas fa-comment"></i> Comment
+                    </button>
+                    <button class="btn btn-link text-decoration-none" @click="sharePost(post)">
+                        <i class="fas fa-share"></i> Share
+                    </button>
+                </div>
+
+                <div v-if="post.showReactions" class="reaction-picker d-flex gap-2">
+                    <button v-for="reaction in reactions" 
+                            class="btn p-0"
+                            @click="addReaction(post, reaction)">
+                        <span class="fs-4">{{ reaction.emoji }}</span>
+                    </button>
+                </div>
+
+                <div class="comments-section mt-3">
+                    <div v-for="comment in post.comments" class="comment d-flex mb-2">
+                        <img :src="comment.user.avatar" class="rounded-circle me-2" width="30">
+                        <div class="comment-bubble p-2 rounded">
+                            <strong>{{ comment.user.name }}</strong>
+                            <p class="mb-0">{{ comment.text }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex mt-3">
+                    <img :src="currentUser.avatar" class="rounded-circle me-2" width="30">
+                    <input type="text" 
+                           class="form-control comment-input rounded-pill" 
+                           v-model="post.newComment"
+                           @keyup.enter="addComment(post)"
+                           placeholder="Write a comment...">
+                </div>
+            </div>
+
+            <!-- Bottom Navigation -->
+            <div class="navigation-bar d-flex justify-content-around py-2">
+                <button class="btn" :class="{ 'text-primary': activeTab === 'home' }" @click="activeTab = 'home'">
+                    <i class="fas fa-home fs-5"></i>
+                </button>
+                <button class="btn" :class="{ 'text-primary': activeTab === 'friends' }" @click="activeTab = 'friends'">
+                    <i class="fas fa-user-friends fs-5"></i>
+                </button>
+                <button class="btn" :class="{ 'text-primary': activeTab === 'watch' }" @click="activeTab = 'watch'">
+                    <i class="fas fa-tv fs-5"></i>
+                </button>
+                <button class="btn" :class="{ 'text-primary': activeTab === 'market' }" @click="activeTab = 'market'">
+                    <i class="fas fa-store fs-5"></i>
+                </button>
+                <button class="btn" :class="{ 'text-primary': activeTab === 'menu' }" @click="activeTab = 'menu'">
+                    <i class="fas fa-bars fs-5"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    darkMode: false,
+                    activeTab: 'home',
+                    reactions: [
+                        { emoji: '👍', type: 'like' },
+                        { emoji: '❤️', type: 'love' },
+                        { emoji: '😂', type: 'haha' },
+                        { emoji: '😲', type: 'wow' },
+                        { emoji: '😢', type: 'sad' },
+                        { emoji: '😡', type: 'angry' }
+                    ],
+                    currentUser: {
+                        id: 1,
+                        name: "John Doe",
+                        avatar: "https://i.pravatar.cc/150"
+                    },
+                    stories: [
+                        {
+                            id: 1,
+                            user: { name: "Alice", avatar: "https://i.pravatar.cc/150?img=1" },
+                            media: "https://picsum.photos/400/600",
+                            seen: false
+                        },
+                        {
+                            id: 2,
+                            user: { name: "Bob", avatar: "https://i.pravatar.cc/150?img=2" },
+                            media: "https://picsum.photos/400/600?1",
+                            seen: true
+                        }
+                    ],
+                    posts: [
+                        {
+                            id: 1,
+                            user: { name: "Jane", avatar: "https://i.pravatar.cc/150?img=3" },
+                            content: "Just launched our new product! 🚀",
+                            time: "2h ago",
+                            media: "https://picsum.photos/400/300",
+                            reactions: [],
+                            comments: [
+                                { 
+                                    user: { name: "Mike", avatar: "https://i.pravatar.cc/150?img=4" },
+                                    text: "Looks amazing! 👏"
+                                }
+                            ],
+                            shares: 12,
+                            newComment: "",
+                            showReactions: false
+                        },
+                        {
+                            id: 2,
+                            user: { name: "Emma", avatar: "https://i.pravatar.cc/150?img=5" },
+                            content: "Beautiful sunset today 🌅",
+                            time: "4h ago",
+                            media: "https://picsum.photos/400/300?2",
+                            reactions: [],
+                            comments: [],
+                            shares: 5,
+                            newComment: "",
+                            showReactions: false
+                        }
+                    ]
+                }
+            },
+            methods: {
+                toggleTheme() {
+                    this.darkMode = !this.darkMode;
+                    document.documentElement.setAttribute('data-theme', this.darkMode ? 'dark' : 'light');
+                },
+                addReaction(post, reaction) {
+                    const existing = post.reactions.find(r => r.type === reaction.type);
+                    if (existing) {
+                        post.reactions = post.reactions.filter(r => r.type !== reaction.type);
+                    } else {
+                        post.reactions.push({ ...reaction, user: this.currentUser });
+                    }
+                    post.showReactions = false;
+                },
+                addComment(post) {
+                    if (post.newComment.trim()) {
+                        post.comments.push({
+                            user: this.currentUser,
+                            text: post.newComment,
+                            time: new Date().toLocaleTimeString()
+                        });
+                        post.newComment = "";
+                    }
+                },
+                sharePost(post) {
+                    post.shares++;
+                    // Add actual sharing logic here
+                },
+                toggleReaction(post) {
+                    const hasLiked = post.reactions.some(r => r.type === 'like');
+                    if (hasLiked) {
+                        post.reactions = post.reactions.filter(r => r.type !== 'like');
+                    } else {
+                        post.reactions.push({ 
+                            emoji: '👍', 
+                            type: 'like',
+                            user: this.currentUser
+                        });
+                    }
+                },
+                showReactions(post) {
+                    post.showReactions = true;
+                },
+                hideReactions() {
+                    this.posts.forEach(post => post.showReactions = false);
+                },
+                openCamera() {
+                    // Add camera integration logic
+                    alert('Camera feature coming soon!');
+                },
+                viewStory(story) {
+                    // Add story viewing logic
+                    alert(`Viewing ${story.user.name}'s story`);
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

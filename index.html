@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facebook Clone</title>
+    <!-- Vue 3 CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        .fb-header {
+            background: #4267B2;
+            height: 60px;
+            color: white;
+        }
+        .fb-nav-item {
+            padding: 0 15px;
+            cursor: pointer;
+        }
+        .fb-main-content {
+            background: #f0f2f5;
+            min-height: calc(100vh - 60px);
+            padding-top: 20px;
+        }
+        .fb-post-box {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .fb-sidebar {
+            position: fixed;
+            width: 280px;
+        }
+        .fb-story {
+            height: 200px;
+            border-radius: 10px;
+            background-size: cover;
+            position: relative;
+        }
+        .fb-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+        .hover-effect:hover {
+            background: #f2f2f2;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="fb-header d-flex align-items-center fixed-top">
+            <div class="container d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                    <h2 class="mb-0">facebook</h2>
+                    <div class="ms-4">
+                        <input type="text" class="form-control" placeholder="Search Facebook" style="width: 300px;">
+                    </div>
+                </div>
+                <div class="d-flex">
+                    <i class="fas fa-home fs-5 fb-nav-item"></i>
+                    <i class="fas fa-user-friends fs-5 fb-nav-item"></i>
+                    <i class="fas fa-tv fs-5 fb-nav-item"></i>
+                </div>
+                <div class="d-flex">
+                    <i class="fas fa-bell fs-5 fb-nav-item"></i>
+                    <i class="fas fa-caret-down fs-5 fb-nav-item"></i>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="fb-main-content container-fluid pt-5">
+            <div class="row">
+                <!-- Left Sidebar -->
+                <div class="col-md-3 fb-sidebar">
+                    <div v-for="item in leftNavItems" class="d-flex align-items-center p-2 hover-effect">
+                        <i :class="item.icon" class="me-3"></i>
+                        <span>{{ item.label }}</span>
+                    </div>
+                </div>
+
+                <!-- Center Content -->
+                <div class="col-md-6 offset-md-3">
+                    <!-- Create Post -->
+                    <div class="fb-post-box p-3 mb-3">
+                        <div class="d-flex mb-3">
+                            <img :src="currentUser.avatar" class="fb-avatar me-2">
+                            <textarea 
+                                v-model="newPostText"
+                                class="form-control" 
+                                rows="2" 
+                                placeholder="What's on your mind?"></textarea>
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <button class="btn btn-light w-100 me-2">
+                                <i class="fas fa-video text-danger me-2"></i>Live Video
+                            </button>
+                            <button class="btn btn-light w-100 me-2">
+                                <i class="fas fa-photo-video text-success me-2"></i>Photo/Video
+                            </button>
+                            <button @click="post" class="btn btn-light w-100">
+                                <i class="fas fa-smile text-warning me-2"></i>Post
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Posts -->
+                    <div v-for="post in posts" class="fb-post-box p-3 mb-3">
+                        <div class="d-flex align-items-center mb-3">
+                            <img :src="post.user.avatar" class="fb-avatar me-2">
+                            <div>
+                                <strong>{{ post.user.name }}</strong>
+                                <div class="text-muted small">{{ post.time }}</div>
+                            </div>
+                        </div>
+                        <p>{{ post.content }}</p>
+                        <hr>
+                        <div class="d-flex justify-content-between text-muted">
+                            <button class="btn btn-link text-decoration-none">
+                                <i class="fas fa-thumbs-up me-2"></i>Like
+                            </button>
+                            <button class="btn btn-link text-decoration-none">
+                                <i class="fas fa-comment me-2"></i>Comment
+                            </button>
+                            <button class="btn btn-link text-decoration-none">
+                                <i class="fas fa-share me-2"></i>Share
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Sidebar -->
+                <div class="col-md-3 fb-sidebar">
+                    <div class="p-3">
+                        <h6>Sponsored</h6>
+                        <div v-for="ad in sponsored" class="mb-3">
+                            <img :src="ad.image" class="img-fluid rounded mb-2">
+                            <div class="small">{{ ad.text }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue
+
+        createApp({
+            data() {
+                return {
+                    currentUser: {
+                        name: "John Doe",
+                        avatar: "https://i.pravatar.cc/40"
+                    },
+                    newPostText: "",
+                    posts: [
+                        {
+                            user: { name: "Jane Smith", avatar: "https://i.pravatar.cc/40?img=1" },
+                            content: "Having a great day! 😊",
+                            time: "2 hours ago"
+                        },
+                        {
+                            user: { name: "Mike Johnson", avatar: "https://i.pravatar.cc/40?img=2" },
+                            content: "Just finished my Vue project!",
+                            time: "4 hours ago"
+                        }
+                    ],
+                    leftNavItems: [
+                        { icon: "fas fa-user", label: "Friends" },
+                        { icon: "fas fa-users", label: "Groups" },
+                        { icon: "fas fa-store", label: "Marketplace" },
+                        { icon: "fas fa-tv", label: "Watch" },
+                        { icon: "fas fa-history", label: "Memories" }
+                    ],
+                    sponsored: [
+                        { 
+                            image: "https://picsum.photos/200/100?random=1",
+                            text: "Amazing Product - Try it now!"
+                        },
+                        { 
+                            image: "https://picsum.photos/200/100?random=2",
+                            text: "Summer Sale - 50% Off!"
+                        }
+                    ]
+                }
+            },
+            methods: {
+                post() {
+                    if (this.newPostText.trim()) {
+                        this.posts.unshift({
+                            user: this.currentUser,
+                            content: this.newPostText,
+                            time: "Just now"
+                        });
+                        this.newPostText = "";
+                    }
+                }
+            }
+        }).mount('#app')
+    </script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

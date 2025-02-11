@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Facebook Chat</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --messenger-blue: #0084FF;
+            --chat-bg: #F0F2F5;
+        }
+        body {
+            background: white;
+            height: 100vh;
+        }
+        .chat-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-header {
+            background: #f0f2f5;
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+        }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 80px 15px 70px;
+        }
+        .message-input {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: white;
+            padding: 10px;
+            border-top: 1px solid #ddd;
+        }
+        .message-bubble {
+            max-width: 75%;
+            margin: 8px 0;
+            padding: 12px;
+            border-radius: 18px;
+        }
+        .received {
+            background: #e4e6eb;
+            border-bottom-left-radius: 4px;
+        }
+        .sent {
+            background: var(--messenger-blue);
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+        .chat-list {
+            padding-top: 60px;
+        }
+        .online-dot {
+            width: 12px;
+            height: 12px;
+            background: #31A24C;
+            border-radius: 50%;
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            border: 2px solid white;
+        }
+        .unread-badge {
+            background: var(--messenger-blue);
+            color: white;
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Chat List -->
+        <div v-if="!activeChat" class="chat-container">
+            <div class="chat-header d-flex align-items-center">
+                <h5 class="mb-0">Chats</h5>
+                <div class="ms-auto">
+                    <i class="fas fa-edit ms-3"></i>
+                </div>
+            </div>
+            
+            <div class="chat-list">
+                <div v-for="chat in chats" @click="openChat(chat)" 
+                     class="d-flex align-items-center p-3 hover-effect">
+                    <div class="position-relative">
+                        <img :src="chat.user.avatar" class="rounded-circle" width="50">
+                        <div v-if="chat.user.online" class="online-dot"></div>
+                    </div>
+                    <div class="ms-3 flex-grow-1">
+                        <div class="d-flex align-items-center">
+                            <strong>{{ chat.user.name }}</strong>
+                            <span class="text-muted small ms-2">{{ chat.lastMessage.time }}</span>
+                        </div>
+                        <div class="text-muted small">
+                            {{ chat.lastMessage.text }}
+                        </div>
+                    </div>
+                    <div v-if="chat.unread" class="unread-badge">
+                        {{ chat.unread }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Chat -->
+        <div v-else class="chat-container">
+            <div class="chat-header d-flex align-items-center">
+                <i class="fas fa-arrow-left me-3" @click="activeChat = null"></i>
+                <div class="d-flex align-items-center">
+                    <div class="position-relative">
+                        <img :src="activeChat.user.avatar" class="rounded-circle" width="40">
+                        <div v-if="activeChat.user.online" class="online-dot"></div>
+                    </div>
+                    <div class="ms-3">
+                        <strong>{{ activeChat.user.name }}</strong>
+                        <div class="small text-muted">
+                            {{ activeChat.user.online ? 'Online' : 'Offline' }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-messages">
+                <div v-for="message in activeChat.messages" 
+                     :class="message.sent ? 'sent' : 'received'" 
+                     class="message-bubble">
+                    <div>{{ message.text }}</div>
+                    <div class="small mt-1" 
+                         :class="message.sent ? 'text-white-50' : 'text-muted'">
+                        {{ message.time }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="message-input">
+                <div class="d-flex align-items-center">
+                    <input type="text" 
+                           v-model="newMessage"
+                           @keyup.enter="sendMessage"
+                           placeholder="Type a message..."
+                           class="form-control rounded-pill me-2">
+                    <button @click="sendMessage" class="btn btn-primary rounded-circle">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue
+
+        createApp({
+            data() {
+                return {
+                    newMessage: '',
+                    activeChat: null,
+                    chats: [
+                        {
+                            user: {
+                                name: "Alice Smith",
+                                avatar: "https://i.pravatar.cc/150?img=1",
+                                online: true
+                            },
+                            lastMessage: {
+                                text: "Hey, how are you?",
+                                time: "10:30 AM"
+                            },
+                            unread: 2,
+                            messages: [
+                                { text: "Hey, how are you?", time: "10:30 AM", sent: false },
+                                { text: "I'm good, thanks!", time: "10:31 AM", sent: true },
+                                { text: "What are you up to?", time: "10:32 AM", sent: false }
+                            ]
+                        },
+                        {
+                            user: {
+                                name: "Bob Johnson",
+                                avatar: "https://i.pravatar.cc/150?img=2",
+                                online: false
+                            },
+                            lastMessage: {
+                                text: "See you tomorrow!",
+                                time: "9:45 AM"
+                            },
+                            unread: 0,
+                            messages: [
+                                { text: "Meeting tomorrow?", time: "9:40 AM", sent: true },
+                                { text: "Yes, see you at 10!", time: "9:42 AM", sent: false }
+                            ]
+                        }
+                    ]
+                }
+            },
+            methods: {
+                openChat(chat) {
+                    this.activeChat = chat
+                    chat.unread = 0
+                },
+                sendMessage() {
+                    if (this.newMessage.trim()) {
+                        const newMsg = {
+                            text: this.newMessage,
+                            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                            sent: true
+                        }
+                        
+                        this.activeChat.messages.push(newMsg)
+                        this.activeChat.lastMessage = newMsg
+                        this.newMessage = ''
+                        
+                        // Simulate reply after 1 second
+                        setTimeout(() => {
+                            this.activeChat.messages.push({
+                                text: "Thanks for your message!",
+                                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                                sent: false
+                            })
+                        }, 1000)
+                    }
+                }
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html>
